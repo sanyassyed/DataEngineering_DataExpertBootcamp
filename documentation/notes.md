@@ -48,7 +48,7 @@
 
 ---
 
-### QUANTIFY
+### QUALIFY
 * Executes after SELECT statement
 * Columns with window funcions can be filtered here
   
