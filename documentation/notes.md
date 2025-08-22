@@ -42,10 +42,22 @@
 2. `WHERE`
 3. `GROUP BY` / `HAVING`
 4. `SELECT`
-5. `ORDER BY`
-6. `LIMIT`
+5. `QUALIFY` (Only available in some platforms eg: snowflake
+6. `ORDER BY`
+7. `LIMIT`
 
 ---
+
+### QUANTIFY
+* Executes after SELECT statement
+* Columns with window funcions can be filtered here
+  
+```sql
+SELECT player_name, 
+       RANK() OVER (ORDER BY pts DESC) rnk
+FROM bootcamp.nba_players
+QUALIFY rnk = 1;
+```
 
 ### SQL Rules & Best Practices
 
@@ -59,6 +71,7 @@
 
 ### EXPLAIN Keyword
 
+* AST - Abstract Syntax Tree is where the query is compiled. And its the AST that is executed by the machine. This is what is shown in the explain command how the query is compiled in the AST
 * Explains how the query will execute (query plan).
 * Example:
 
@@ -131,6 +144,12 @@ DELETE FROM zachwilson.nba_players_ranked_partitioned;
 | Performance | Can be slower if reused multiple times | Faster for repeated use         |
 
 ---
+
+### SQL DATA OBJECTS
+- Table / Temporary Table: This 15 a materialized result set, The only difference between table and temp table is that tables exist after the query executes.
+- Subquery : Do not nest them. Mostly just use if you are returning a single number or result (scalar subquery)
+- View: This is like a CTE with a name, use when you need to share query logic. Keep in mind that it executes every single time
+- Common Table Expression - This is your go to whenever you need to build a complex query, The only time you want to use something else is when you need to materialize 
 
 ### SQL Commands for Database & Schema Management
 
