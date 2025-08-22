@@ -88,7 +88,7 @@ JOIN cte c ON e.id = c.id
 WHERE age_rnk = 1;
 ```
 
-* Some databases support `EXPLAIN ANALYZE` for runtime execution details.
+* Some databases support `EXPLAIN or ANALYZE` for runtime execution details.
 
 ---
 
