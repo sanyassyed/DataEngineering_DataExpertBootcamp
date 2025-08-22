@@ -1,154 +1,231 @@
-# Notes
-## Topic 1 - Kickoff 
+# Data Engineering Notes
 
 ---
 
-## Topic 2 - Why should you pick DE
+## Topic 1 – Kickoff
+
+*(No content yet – placeholder for introduction)*
 
 ---
 
-## Topic 3 - SQL Basic
+## Topic 2 – Why Pick Data Engineering
 
-### Lecture 1 - Intro to SQL 101
-* Why learn SQL
-* When to use SQL
-* Count, Joins, 
-* SELECT, WHERE
-* INSERT
-* DELETE
-* UPDATE
-* SQL is for data already `IN` the database, datawarehouse etc
+*(No content yet – can add reasons like high demand, scalable career, ability to work with big data pipelines, etc.)*
 
+---
 
-#### SQL Command Hierarchy
-1. FROM / JOIN
-1. WHERE
-1. GROUP BY / HAVING
-1. SELECT
-1. ORDER BY
-1. LIMIT
+## Topic 3 – SQL Basics
 
+### Lecture 1 – Introduction to SQL 101
 
-#### SQL RULES
-* FILTER as soon as you can so you process least amout of data
+**Why Learn SQL**
 
+* SQL is the standard language for interacting with relational databases.
+* Useful for querying, analyzing, and managing data in databases, data warehouses, and data lakes.
 
-#### EXPLAIN Keyword
-This command explains how the query is executed
+**When to Use SQL**
+
+* When working with structured data already stored in databases.
+* For reporting, data cleaning, aggregation, and analytics tasks.
+
+**Core SQL Commands**
+
+* `SELECT`, `WHERE`, `COUNT()`, `JOIN` (INNER, LEFT, RIGHT, FULL)
+* `INSERT`, `UPDATE`, `DELETE`
+* SQL is for data **already in the database**.
+
+---
+
+### SQL Command Execution Hierarchy
+
+1. `FROM` / `JOIN`
+2. `WHERE`
+3. `GROUP BY` / `HAVING`
+4. `SELECT`
+5. `ORDER BY`
+6. `LIMIT`
+
+---
+
+### SQL Rules & Best Practices
+
+* Filter data as early as possible to minimize processing (`WHERE` before `SELECT`).
+* Use subqueries only when they return a single scalar value.
+* Avoid `SELECT *` in production queries.
+* Use indexes for faster filtering and joining.
+* Backup data before performing `DELETE` or `UPDATE`.
+
+---
+
+### EXPLAIN Keyword
+
+* Explains how the query will execute (query plan).
+* Example:
 
 ```sql
-EXPLAIN WITH cte 
-AS
-(SELECT id,
-        name,
-        RANK() OVER (ORDER BY age ASC) age_rnk
-FROM Employee)
+EXPLAIN WITH cte AS (
+    SELECT id,
+           name,
+           RANK() OVER (ORDER BY age ASC) AS age_rnk
+    FROM Employee
+)
 SELECT *
-FROM Employee e,
-     cte c
-WHERE e.id = c.id AND age_rnk = 1;
+FROM Employee e
+JOIN cte c ON e.id = c.id
+WHERE age_rnk = 1;
 ```
 
+* Some databases support `EXPLAIN ANALYZE` for runtime execution details.
+
 ---
 
-### Lab 1 - GROUP BY, JOIN and Common Table Expression Lab
+## Lab 1 – GROUP BY, JOIN, and Common Table Expressions (CTEs)
 
-#### CTE vs Temporary Table
-* CTE : Is executed at every call (Similar to Views)
-* Temporary Tables: Are executed and the result is stored (Similar to Materialized Views)
+### Partitioning Example
 
-#### Partitioning
 ```sql
--- View the table creation command
+-- View table creation command
 SHOW CREATE TABLE zachwilson.nba_players_ranked;
 
--- Create table with partition
-CREATE TABLE zachwilson. nba_players_ranked_partitioned (
-player_name VARCHAR, -- 'LeBron James', 'jsoewiurwerlj', ''
-pts DECIMAL, -- 3.7 or 888.2
-rank BIGINT, -- Only numbers up to this big for BIGINT 9,223,372,036,854, 775,807 (9.2 quintillion) 2^64 , integer up to 2 BILLION, 2^32
-season SMALLINT -- this table will only work for the next 2 billion seasons, TINYINT (only up to 255), smallint (32,000)
-) 
-WITH (
-     partitioning = ARRAY['season']
-     )
-
--- Insert values into the above table 
-INSERT INTO zachwilson.nba_players_ranked_partitioned
-WITH players_ranked 
-AS 
-(
-SELECT player_name,
-        pts,
-        RANK() OVER (ORDER BY pts DESC) AS RANK,
-        season
-FROM bootcamp. nba_player_seasons
+-- Create partitioned table
+CREATE TABLE zachwilson.nba_players_ranked_partitioned (
+    player_name VARCHAR,   -- e.g., 'LeBron James'
+    pts DECIMAL,           -- e.g., 3.7 or 888.2
+    rank BIGINT,           -- Max: 9,223,372,036,854,775,807
+    season SMALLINT        -- Max: 32,767 (SMALLINT)
 )
-SELECT * FROM players_ranked
-WHERE season = 2007
+WITH (
+    partitioning = ARRAY['season']
+);
 
--- Test
-SELECT * FROM zachwilson.nba_players_ranked_partitioned WHERE season = 2007 AND rank = 1
-DELETE FROM zachwilson.nba_players_ranked_partitioned
+-- Insert values into partitioned table
+INSERT INTO zachwilson.nba_players_ranked_partitioned
+WITH players_ranked AS (
+    SELECT player_name,
+           pts,
+           RANK() OVER (ORDER BY pts DESC) AS rank,
+           season
+    FROM bootcamp.nba_player_seasons
+)
+SELECT *
+FROM players_ranked
+WHERE season = 2007;
+
+-- Test query
+SELECT *
+FROM zachwilson.nba_players_ranked_partitioned
+WHERE season = 2007 AND rank = 1;
+
+-- Delete all records
+DELETE FROM zachwilson.nba_players_ranked_partitioned;
 ```
 
-#### Query Syntax
+---
 
-Perfect 👍 I expanded your table to include **commands for selecting/using databases & schemas** and a few other useful ones for managing objects. Here’s a more complete reference:
+### CTE vs Temporary Table
+
+| Feature     | CTE                                    | Temporary Table                 |
+| ----------- | -------------------------------------- | ------------------------------- |
+| Execution   | Executes at every call (like View)     | Executes once; result is stored |
+| Use Case    | Simplifying queries, modularity        | Storing intermediate results    |
+| Performance | Can be slower if reused multiple times | Faster for repeated use         |
 
 ---
 
-| Task                                                 | **Snowflake Command**                                   | **Trino Command**                                                     |
-| ---------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------- |
-| **List all databases**                               | `SHOW DATABASES;`                                       | `SHOW CATALOGS;`                                                      |
-| **What is the current database**                     | `SELECT CURRENT_DATABASE();`                            | `SHOW SESSION LIKE 'catalog';`                                        |
-| **List all schemas in a database**                   | `SHOW SCHEMAS IN DATABASE my_database;`                 | `SHOW SCHEMAS FROM catalog_name;`                                     |
-| **List all schemas in the current database**         | `SHOW SCHEMAS;`                                         | `SHOW SCHEMAS;` *(works only if a default catalog is set)*            |
-| **What is the current schema**                       | `SELECT CURRENT_SCHEMA();`                              | `SHOW SESSION LIKE 'schema';`                                         |
-| **Use a particular database**                        | `USE DATABASE my_database;`                             | `USE catalog_name;` *(sets default catalog for session)*              |
-| **Use a particular schema**                          | `USE SCHEMA my_schema;` *(after setting database)*      | `USE catalog_name.schema_name;` *(sets both catalog + schema)*        |
-| **List all data objects (tables/views) in a schema** | `SHOW TABLES IN SCHEMA my_database.my_schema;`          | `SHOW TABLES FROM catalog_name.schema_name;`                          |
-| **Describe a table structure**                       | `DESCRIBE TABLE my_database.my_schema.my_table;`        | `DESCRIBE catalog_name.schema_name.my_table;`                         |
-| **Show columns of a table**                          | `SHOW COLUMNS IN TABLE my_database.my_schema.my_table;` | `SHOW COLUMNS FROM catalog_name.schema_name.my_table;`                |
-| **Drop a database**                                  | `DROP DATABASE my_database;`                            | `DROP SCHEMA catalog_name.schema_name;` *(drops schema, not catalog)* |
-| **Drop a schema**                                    | `DROP SCHEMA my_database.my_schema;`                    | `DROP SCHEMA catalog_name.schema_name;`                               |
-| **Drop a table**                                     | `DROP TABLE my_database.my_schema.my_table;`            | `DROP TABLE catalog_name.schema_name.my_table;`                       |
+### SQL Commands for Database & Schema Management
+
+| Task                             | Snowflake Command                                       | Trino Command                                             |
+| -------------------------------- | ------------------------------------------------------- | --------------------------------------------------------- |
+| List all databases               | `SHOW DATABASES;`                                       | `SHOW CATALOGS;`                                          |
+| Current database                 | `SELECT CURRENT_DATABASE();`                            | `SHOW SESSION LIKE 'catalog';`                            |
+| List all schemas in a database   | `SHOW SCHEMAS IN DATABASE my_database;`                 | `SHOW SCHEMAS FROM catalog_name;`                         |
+| List schemas in current database | `SHOW SCHEMAS;`                                         | `SHOW SCHEMAS;` *(needs default catalog)*                 |
+| Current schema                   | `SELECT CURRENT_SCHEMA();`                              | `SHOW SESSION LIKE 'schema';`                             |
+| Use database                     | `USE DATABASE my_database;`                             | `USE catalog_name;` *(sets default catalog)*              |
+| Use schema                       | `USE SCHEMA my_schema;` *(after setting database)*      | `USE catalog_name.schema_name;` *(sets catalog + schema)* |
+| List tables/views in schema      | `SHOW TABLES IN SCHEMA my_database.my_schema;`          | `SHOW TABLES FROM catalog_name.schema_name;`              |
+| Describe table structure         | `DESCRIBE TABLE my_database.my_schema.my_table;`        | `DESCRIBE catalog_name.schema_name.my_table;`             |
+| Show columns                     | `SHOW COLUMNS IN TABLE my_database.my_schema.my_table;` | `SHOW COLUMNS FROM catalog_name.schema_name.my_table;`    |
+| Drop database                    | `DROP DATABASE my_database;`                            | `DROP SCHEMA catalog_name.schema_name;` *(drops schema)*  |
+| Drop schema                      | `DROP SCHEMA my_database.my_schema;`                    | `DROP SCHEMA catalog_name.schema_name;`                   |
+| Drop table                       | `DROP TABLE my_database.my_schema.my_table;`            | `DROP TABLE catalog_name.schema_name.my_table;`           |
+
+**Key Difference**
+
+* Snowflake: `Database → Schema → Table`
+* Trino: `Catalog → Schema → Table` (Catalog ≈ Database in Snowflake terms)
 
 ---
 
-⚡ Key differences:
+### Example Queries
 
-* **Snowflake** → `Database → Schema → Table`
-* **Trino** → `Catalog → Schema → Table` (catalog ≈ database in Snowflake terms)
-
-#### Example Queries
 ```sql
--- List the databases
-SHOW CATALOGS; -- academy, snowflake etc
--- View the current database
--- SHOW SESSION LIKE 'catalog'; 
+-- List all catalogs (databases)
+SHOW CATALOGS;
 
---View the schemas in the current database
-SHOW SCHEMAS; -- bootcamp, bootcamp_de etc
+-- Show current catalog
+SHOW SESSION LIKE 'catalog';
 
--- View schemas from a particular database
+-- View schemas in current catalog
+SHOW SCHEMAS;
+
+-- View schemas from a specific catalog
 SHOW SCHEMAS FROM academy;
 SHOW SCHEMAS LIKE '%boot%';
 
--- View all the schemas in the database academy with the word 'boot' in it
+-- Query all schemas in catalog 'academy' containing 'boot'
 SELECT schema_name
 FROM academy.information_schema.schemata
 WHERE schema_name LIKE '%boot%';
 
--- View the tables in the schema named bootcamp
+-- View tables in schema 'bootcamp'
 SHOW TABLES FROM bootcamp;
-
 ```
 
 ---
 
-## Python 
-* Bring in data from other sources into the datalake, database, datawarehouse etc.
+## Python
 
-## SQL + Python
-* `Pyspark` : Lets you combine python and sql
+**Use Case in Data Engineering**
+
+* Bring data from external sources into a datalake, database, or data warehouse.
+* Common libraries: `pandas`, `sqlalchemy`, `pyodbc`, `psycopg2`.
+
+---
+
+## SQL + Python (PySpark)
+
+* Combine Python and SQL for big data processing.
+* Example:
+
+```python
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.appName("SQL+Python").getOrCreate()
+
+# Load data
+df = spark.read.csv("data.csv", header=True, inferSchema=True)
+
+# SQL query
+df.createOrReplaceTempView("my_table")
+result = spark.sql("SELECT col1, COUNT(*) FROM my_table GROUP BY col1")
+result.show()
+```
+
+* Benefits:
+
+  * Handle large datasets efficiently.
+  * Apply Python transformations on SQL query results.
+  * Integrate with Spark DataFrames for ETL pipelines.
+
+---
+
+### Tips & Best Practices
+
+* Always filter data early (`WHERE`) to reduce computation.
+* Use CTEs for readability; temp tables for repeated use.
+* Avoid `SELECT *` in production queries.
+* Backup data before `DELETE` or `UPDATE`.
+* Use `EXPLAIN` to optimize query performance.
+
+---
